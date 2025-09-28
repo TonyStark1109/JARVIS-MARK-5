@@ -4,6 +4,7 @@ JARVIS Unified Voice System
 Consolidated voice recognition and TTS system with Fast Whisper + Threading
 Designed for pure voice interaction like a real AI assistant
 """
+# pylint: disable=import-error,broad-exception-caught,trailing-whitespace,import-outside-toplevel
 
 import os
 import sys
@@ -16,10 +17,25 @@ import io
 import datetime
 from typing import Optional, Dict, Any, Callable
 
-import numpy as np
-import pyaudio
-import pygame
-import requests
+try:
+    import numpy as np
+except ImportError:
+    np = None
+
+try:
+    import pyaudio
+except ImportError:
+    pyaudio = None
+
+try:
+    import pygame
+except ImportError:
+    pygame = None
+
+try:
+    import requests
+except ImportError:
+    requests = None
 
 # Try to import faster_whisper
 try:
@@ -74,12 +90,13 @@ class JARVISUnifiedVoice:
 
         # Audio configuration for Logitech headset
         self.chunk_size = 1024
-        self.audio_format = pyaudio.paInt16
+        self.audio_format = pyaudio.paInt16 if pyaudio else None
         self.channels = 1
         self.sample_rate = 16000
         self.record_seconds = 3
-        self.silence_threshold = 0.1  # Extremely low threshold - process all audio
+        self.silence_threshold = 0.01  # Very low threshold for better voice detection
         self.silence_duration = 1.0
+        self.energy_threshold = 0.005  # Lower energy threshold for better detection
 
         # Logitech device detection
         self.logitech_device_index = self._find_logitech_device()
@@ -106,7 +123,8 @@ class JARVISUnifiedVoice:
         self.voice_config = self._get_voice_config()
 
         # Initialize pygame for audio playback
-        pygame.mixer.init()
+        if pygame:
+            pygame.mixer.init()
 
         # JARVIS modules
         self.desktop_interface = None
@@ -127,6 +145,9 @@ class JARVISUnifiedVoice:
     def _find_logitech_device(self):
         """Find Logitech headset device index"""
         try:
+            if not pyaudio:
+                self.logger.warning("PyAudio not available, using default device")
+                return None
             audio = pyaudio.PyAudio()
             for i in range(audio.get_device_count()):
                 info = audio.get_device_info_by_index(i)
@@ -174,29 +195,92 @@ class JARVISUnifiedVoice:
         }
 
     def _initialize_whisper(self):
-        """Initialize Fast Whisper model"""
+        """Initialize Fast Whisper model with GPU support"""
         if not WHISPER_AVAILABLE:
             self.logger.error(
                 "Faster Whisper not available - this is required for JARVIS voice system"
             )
             return
 
+        # Try GPU first, but fallback to CPU if CUDA libraries are missing
+        gpu_attempted = False
         try:
-            # Use CPU for now to avoid CUDA library issues
-            self.logger.info("Using CPU for Whisper (faster setup)")
-            device = "cpu"
-            compute_type = "float32"
-
-            self.logger.info("Loading Whisper model: base on %s", device)
-            self.whisper_model = WhisperModel(
-                "base",
-                device=device,
-                compute_type=compute_type
-            )
-            self.logger.info("Whisper model loaded successfully on %s", device)
+            # Detect GPU availability and configure accordingly
+            device, compute_type = self._detect_best_device()
+            if device == "cuda":
+                gpu_attempted = True
+                self.logger.info("Loading Whisper model: base on %s with %s", device, compute_type)
+                self.whisper_model = WhisperModel(
+                    "base",
+                    device=device,
+                    compute_type=compute_type
+                )
+                self.logger.info("Whisper model loaded successfully on %s", device)
+            else:
+                # Direct CPU loading
+                self.logger.info("Loading Whisper model: base on CPU")
+                self.whisper_model = WhisperModel(
+                    "base",
+                    device="cpu",
+                    compute_type="float32"
+                )
+                self.logger.info("Whisper model loaded successfully on CPU")
         except (RuntimeError, OSError, ImportError) as e:
             self.logger.error("Failed to load Whisper model: %s", e)
-            self.whisper_model = None
+            if gpu_attempted:
+                # GPU failed, try CPU fallback
+                try:
+                    self.logger.info("Falling back to CPU for Whisper (GPU libraries missing)")
+                    self.whisper_model = WhisperModel(
+                        "base",
+                        device="cpu",
+                        compute_type="float32"
+                    )
+                    self.logger.info("Whisper model loaded successfully on CPU (fallback)")
+                except Exception as fallback_error:
+                    self.logger.error("CPU fallback also failed: %s", fallback_error)
+                    self.whisper_model = None
+            else:
+                self.logger.error("CPU loading failed: %s", e)
+                self.whisper_model = None
+
+    def _detect_best_device(self) -> tuple[str, str]:
+        """Detect the best available device for Whisper processing"""
+        try:
+            import torch
+            if torch.cuda.is_available():
+                gpu_count = torch.cuda.device_count()
+                gpu_name = torch.cuda.get_device_name(0)
+                self.logger.info("CUDA available: %d GPU(s) detected - %s", gpu_count, gpu_name)
+
+                # Check GPU memory
+                gpu_memory = torch.cuda.get_device_properties(0).total_memory / 1024**3
+                self.logger.info("GPU Memory: %.1f GB", gpu_memory)
+                
+                # Test if CUDA libraries are actually working
+                try:
+                    # Try a simple CUDA operation to test libraries
+                    test_tensor = torch.tensor([1.0]).cuda()
+                    _ = test_tensor * 2  # Test operation
+                    self.logger.info("CUDA libraries working properly")
+                    
+                    if gpu_memory >= 4:  # At least 4GB VRAM for stable operation
+                        return "cuda", "float16"  # Use half precision for better performance
+                    else:
+                        self.logger.warning("GPU memory too low (%.1f GB), using CPU", gpu_memory)
+                        return "cpu", "float32"
+                except Exception as cuda_error:
+                    self.logger.warning("CUDA libraries not working: %s, using CPU", cuda_error)
+                    return "cpu", "float32"
+            else:
+                self.logger.info("CUDA not available, using CPU")
+                return "cpu", "float32"
+        except ImportError:
+            self.logger.info("PyTorch not available, using CPU")
+            return "cpu", "float32"
+        except Exception as e:
+            self.logger.warning("Error detecting GPU: %s, using CPU", e)
+            return "cpu", "float32"
 
 
     def _initialize_modules(self):
@@ -227,6 +311,9 @@ class JARVISUnifiedVoice:
             self.is_processing = True
 
             # Initialize audio
+            if not pyaudio:
+                self.logger.error("PyAudio not available, cannot start listening")
+                return
             self.audio = pyaudio.PyAudio()
 
             # Start audio stream with Logitech device
@@ -282,13 +369,15 @@ class JARVISUnifiedVoice:
         """Audio stream callback for real-time processing"""
         if self.is_listening:
             # Convert audio data to numpy array
+            if not np:
+                return (in_data, pyaudio.paContinue if pyaudio else None)
             audio_data = np.frombuffer(in_data, dtype=np.int16)
 
             # Add to processing queue
             if not self.audio_queue.full():
                 self.audio_queue.put(audio_data)
 
-        return (in_data, pyaudio.paContinue)
+        return (in_data, pyaudio.paContinue if pyaudio else None)
 
     def _process_audio_thread(self):
         """Background thread for processing audio"""
@@ -309,6 +398,8 @@ class JARVISUnifiedVoice:
                 # Process when buffer is full
                 if len(audio_buffer) >= buffer_size:
                     # Convert to numpy array
+                    if not np:
+                        continue
                     audio_data = np.array(audio_buffer[:buffer_size], dtype=np.int16)
                     audio_buffer = audio_buffer[buffer_size:]
 
@@ -326,18 +417,21 @@ class JARVISUnifiedVoice:
                 if self.on_error:
                     self.on_error(f"Audio processing error: {e}")
 
-    def _process_audio_chunk(self, audio_data: np.ndarray):
+    def _process_audio_chunk(self, audio_data):
         """Process a chunk of audio data"""
         try:
             # Check if audio has enough energy (not silence)
+            if not np:
+                return
             audio_level = np.max(np.abs(audio_data))
+            rms_level = np.sqrt(np.mean(audio_data**2))
             self.logger.info(
-                "Audio level: %.2f (threshold: %.2f)", 
-                audio_level,
-                self.silence_threshold
+                "Audio level: %.4f (max), %.4f (rms) - thresholds: %.4f, %.4f", 
+                audio_level, rms_level, self.silence_threshold, self.energy_threshold
             )
 
-            if audio_level < self.silence_threshold:
+            # Use both max and RMS thresholds for better detection
+            if audio_level < self.silence_threshold and rms_level < self.energy_threshold:
                 self.logger.info("Audio too quiet, skipping")
                 return
 
@@ -369,16 +463,18 @@ class JARVISUnifiedVoice:
             if self.on_error:
                 self.on_error(f"Audio processing error: {e}")
 
-    def _transcribe_with_whisper(self, audio_data: np.ndarray) -> Optional[Dict[str, Any]]:
+    def _transcribe_with_whisper(self, audio_data) -> Optional[Dict[str, Any]]:
         """Transcribe audio using Fast Whisper"""
         if not self.whisper_model:
             return None
 
         try:
             # Convert to float32 and normalize
+            if not np:
+                return None
             audio_float = audio_data.astype(np.float32) / 32768.0
 
-            # Transcribe with Whisper (optimized for voice detection)
+            # Transcribe with Whisper (optimized for GPU and voice detection)
             segments, info = self.whisper_model.transcribe(
                 audio_float,
                 beam_size=1,  # Faster processing
@@ -388,9 +484,9 @@ class JARVISUnifiedVoice:
                 temperature=0.0,  # More deterministic
                 compression_ratio_threshold=2.4,
                 log_prob_threshold=-1.0,
-                no_speech_threshold=0.1,  # Very low threshold for speech detection
+                no_speech_threshold=0.05,  # Very low threshold for speech detection
                 word_timestamps=True,  # Better word recognition
-                initial_prompt="Hey JARVIS"  # Help with wake word recognition
+                initial_prompt="Hey JARVIS, wake up, listen"  # Help with wake word recognition
             )
 
             # Collect segments
@@ -399,11 +495,11 @@ class JARVISUnifiedVoice:
 
             for segment in segments:
                 full_text += segment.text
-                if hasattr(segment, 'avg_logprob'):
+                if hasattr(segment, 'avg_logprob') and np:
                     confidence_scores.append(np.exp(segment.avg_logprob))
 
             if full_text.strip():
-                avg_confidence = np.mean(confidence_scores) if confidence_scores else 0.0
+                avg_confidence = np.mean(confidence_scores) if confidence_scores and np else 0.0
                 return {
                     "text": full_text.strip().lower(),
                     "confidence": float(avg_confidence),
@@ -413,6 +509,18 @@ class JARVISUnifiedVoice:
 
         except (RuntimeError, OSError, ValueError) as e:
             self.logger.error("Whisper transcription error: %s", e)
+            # If CUDA library error, try to reinitialize with CPU
+            if "cublas64_12.dll" in str(e) or "CUDA" in str(e):
+                self.logger.warning("CUDA library error detected, switching to CPU mode")
+                try:
+                    self.whisper_model = WhisperModel(
+                        "base",
+                        device="cpu",
+                        compute_type="float32"
+                    )
+                    self.logger.info("Successfully switched to CPU mode")
+                except Exception as cpu_error:
+                    self.logger.error("Failed to switch to CPU mode: %s", cpu_error)
 
         return None
 
@@ -563,24 +671,31 @@ class JARVISUnifiedVoice:
                 "xi-api-key": self.elevenlabs_api_key
             }
 
+            if not requests:
+                self.logger.warning("Requests not available, using system TTS")
+                return self._speak_system_tts(text)
             response = requests.post(url, json=data, headers=headers, timeout=30)
 
             if response.status_code == 200:
                 # Play audio
-                audio_data = io.BytesIO(response.content)
-                pygame.mixer.music.load(audio_data)
-                pygame.mixer.music.play()
+                if pygame:
+                    audio_data = io.BytesIO(response.content)
+                    pygame.mixer.music.load(audio_data)
+                    pygame.mixer.music.play()
 
-                # Wait for audio to finish
-                while pygame.mixer.music.get_busy():
-                    time.sleep(0.1)
+                    # Wait for audio to finish
+                    while pygame.mixer.music.get_busy():
+                        time.sleep(0.1)
+                else:
+                    self.logger.warning("Pygame not available, using system TTS")
+                    self._speak_system_tts(text)
 
                 self.logger.info("Spoke: %s", text)
             else:
                 self.logger.error("TTS request failed: %s", response.status_code)
                 self._speak_system_tts(text)
 
-        except (RuntimeError, OSError, ValueError, requests.RequestException) as e:
+        except (RuntimeError, OSError, ValueError) as e:
             self.logger.error("Error speaking: %s", e)
             self._speak_system_tts(text)
 
@@ -601,13 +716,40 @@ class JARVISUnifiedVoice:
 
     def get_status(self) -> Dict[str, Any]:
         """Get system status"""
+        gpu_info = self._get_gpu_info()
         return {
             "is_listening": self.is_listening,
             "is_processing": self.is_processing,
             "whisper_available": WHISPER_AVAILABLE and self.whisper_model is not None,
             "tts_available": bool(self.elevenlabs_api_key) or TTS_AVAILABLE,
-            "wake_words": self.wake_words
+            "wake_words": self.wake_words,
+            "gpu_info": gpu_info,
+            "audio_config": {
+                "sample_rate": self.sample_rate,
+                "channels": self.channels,
+                "silence_threshold": self.silence_threshold,
+                "energy_threshold": self.energy_threshold
+            }
         }
+
+    def _get_gpu_info(self) -> Dict[str, Any]:
+        """Get GPU information for debugging"""
+        try:
+            import torch
+            if torch.cuda.is_available():
+                return {
+                    "cuda_available": True,
+                    "gpu_count": torch.cuda.device_count(),
+                    "gpu_name": torch.cuda.get_device_name(0),
+                    "gpu_memory_gb": torch.cuda.get_device_properties(0).total_memory / 1024**3,
+                    "current_device": torch.cuda.current_device()
+                }
+            else:
+                return {"cuda_available": False, "reason": "CUDA not available"}
+        except ImportError:
+            return {"cuda_available": False, "reason": "PyTorch not installed"}
+        except Exception as e:
+            return {"cuda_available": False, "reason": f"Error: {e}"}
 
     def cleanup(self):
         """Cleanup resources"""

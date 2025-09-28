@@ -126,9 +126,9 @@ class EpisodicMemory:
             scored_memories.sort(key=lambda x: x.similarity, reverse=True)
             return scored_memories[:limit]
 
-        except Exception as e:
+    except Exception as e:
             self.logger.error(f"Failed to search memories: {e}")
-            return []
+        return []
     
     def get_memory(self, memory_id: str) -> Optional[MemoryItem]:
         """Get a specific memory by ID."""
@@ -137,7 +137,7 @@ class EpisodicMemory:
                 if memory.id == memory_id:
                     return memory
             return None
-        except Exception as e:
+    except Exception as e:
             self.logger.error(f"Failed to get memory {memory_id}: {e}")
             return None
     
@@ -157,7 +157,7 @@ class EpisodicMemory:
             self.save_memories()
             self.logger.info(f"Updated memory: {memory_id}")
             return True
-        except Exception as e:
+    except Exception as e:
             self.logger.error(f"Failed to update memory {memory_id}: {e}")
             return False
     
@@ -171,7 +171,7 @@ class EpisodicMemory:
                     self.logger.info(f"Deleted memory: {memory_id}")
                     return True
             return False
-        except Exception as e:
+    except Exception as e:
             self.logger.error(f"Failed to delete memory {memory_id}: {e}")
             return False
     
@@ -185,7 +185,7 @@ class EpisodicMemory:
             self.memories.clear()
             self.save_memories()
             self.logger.info("Cleared all memories")
-        except Exception as e:
+    except Exception as e:
             self.logger.error(f"Failed to clear memories: {e}")
     
     def get_memory_stats(self) -> Dict[str, Any]:
@@ -197,7 +197,7 @@ class EpisodicMemory:
                 "newest_memory": max(m.timestamp for m in self.memories).isoformat() if self.memories else None,
                 "memory_file": self.memory_file
             }
-        except Exception as e:
+    except Exception as e:
             self.logger.error(f"Failed to get memory stats: {e}")
             return {}
 
