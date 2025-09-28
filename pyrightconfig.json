@@ -1,0 +1,34 @@
+{
+    "pythonVersion": "3.13",
+    "pythonPlatform": "Windows",
+    "executionEnvironments": [
+        {
+            "root": ".",
+            "pythonPath": "C:\\Program Files\\Python313\\python.exe",
+            "extraPaths": [
+                "D:\\JARVIS-MARK5",
+                "D:\\JARVIS-MARK5\\RAVANA",
+                "D:\\JARVIS-MARK5\\backend",
+                "D:\\JARVIS-MARK5\\MCP_SERVERS",
+                "C:\\Users\\gurum\\AppData\\Roaming\\Python\\Python313\\site-packages",
+                "C:\\Program Files\\Python313\\Lib\\site-packages"
+            ]
+        }
+    ],
+    "include": [
+        "**/*.py"
+    ],
+    "exclude": [
+        "**/node_modules",
+        "**/__pycache__",
+        "**/venv"
+    ],
+    "typeCheckingMode": "basic",
+    "useLibraryCodeForTypes": true,
+    "autoImportCompletions": true,
+    "reportMissingImports": "none",
+    "reportMissingModuleSource": "none",
+    "reportAttributeAccessIssue": "none",
+    "reportArgumentType": "none",
+    "reportOptionalCall": "none"
+}

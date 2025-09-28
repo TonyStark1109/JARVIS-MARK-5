@@ -1,0 +1,10 @@
+{
+  "temp_directory": "D:\\JARVIS-MARK5\\Temp",
+  "logs_directory": "D:\\JARVIS-MARK5\\Logs",
+  "ai_models_directory": "D:\\JARVIS-MARK5\\AI_Models",
+  "config_directory": "D:\\JARVIS-MARK5\\Config",
+  "home_directory": "D:\\JARVIS-MARK5",
+  "docker_data_directory": "C:\\Users\\gurum\\AppData\\Local\\Docker\\wsl\\data",
+  "cache_directory": "D:\\JARVIS-MARK5\\Cache",
+  "data_directory": "D:\\JARVIS-MARK5\\Data"
+}

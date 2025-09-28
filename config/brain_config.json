@@ -1,0 +1,12 @@
+{
+  "ai_model": "gpt-4",
+  "voice_enabled": true,
+  "voice_rate": 150,
+  "voice_volume": 0.9,
+  "hacking_tools_enabled": true,
+  "ravana_integration": true,
+  "perplexica_enabled": true,
+  "max_tools": 1000,
+  "timeout": 30,
+  "log_level": "INFO"
+}

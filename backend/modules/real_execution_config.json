@@ -1,0 +1,8 @@
+{
+  "docker_tools": true,
+  "real_time_execution": true,
+  "simulation_mode": false,
+  "external_tools": true,
+  "log_all_commands": true,
+  "safety_checks": true
+}

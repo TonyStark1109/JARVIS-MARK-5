@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JARVIS - Just A Rather Very Intelligent System</title>
+    <script type="text/javascript" src="/eel.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap');
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Orbitron', monospace;
+            background: linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 50%, #16213e 100%);
+            color: #00ffff;
+            overflow: hidden;
+            height: 100vh;
+        }
+        
+        .jarvis-container {
+            position: relative;
+            width: 100%;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .jarvis-logo {
+            font-size: 4rem;
+            font-weight: 900;
+            text-align: center;
+            margin-bottom: 2rem;
+            text-shadow: 0 0 20px #00ffff, 0 0 40px #00ffff, 0 0 60px #00ffff;
+            animation: glow 2s ease-in-out infinite alternate;
+        }
+        
+        @keyframes glow {
+            from { text-shadow: 0 0 20px #00ffff, 0 0 40px #00ffff, 0 0 60px #00ffff; }
+            to { text-shadow: 0 0 10px #00ffff, 0 0 20px #00ffff, 0 0 30px #00ffff; }
+        }
+        
+        .status-display {
+            font-size: 1.5rem;
+            margin-bottom: 2rem;
+            padding: 1rem 2rem;
+            background: rgba(0, 255, 255, 0.1);
+            border: 2px solid #00ffff;
+            border-radius: 10px;
+            text-align: center;
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.3);
+        }
+        
+        .control-panel {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        
+        .jarvis-button {
+            background: linear-gradient(45deg, #1a1a2e, #16213e);
+            border: 2px solid #00ffff;
+            color: #00ffff;
+            padding: 1rem 2rem;
+            font-family: 'Orbitron', monospace;
+            font-size: 1rem;
+            font-weight: 700;
+            cursor: pointer;
+            border-radius: 10px;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .jarvis-button:hover {
+            background: linear-gradient(45deg, #00ffff, #0080ff);
+            color: #000;
+            box-shadow: 0 0 30px rgba(0, 255, 255, 0.5);
+            transform: translateY(-2px);
+        }
+        
+        .jarvis-button:disabled {
+            background: rgba(100, 100, 100, 0.3);
+            border-color: #666;
+            color: #666;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .jarvis-button:disabled:hover {
+            box-shadow: none;
+        }
+        
+        .main-button {
+            background: linear-gradient(45deg, #ff6b35, #f7931e);
+            border-color: #ff6b35;
+            color: #fff;
+            font-size: 1.2rem;
+            padding: 1.5rem 3rem;
+        }
+        
+        .main-button:hover {
+            background: linear-gradient(45deg, #ff8c42, #ffb347);
+            box-shadow: 0 0 40px rgba(255, 107, 53, 0.6);
+        }
+        
+        .hologram-display {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            width: 300px;
+            height: 200px;
+            background: rgba(0, 255, 255, 0.05);
+            border: 1px solid #00ffff;
+            border-radius: 10px;
+            padding: 1rem;
+            font-size: 0.9rem;
+            overflow-y: auto;
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.2);
+        }
+        
+        .hologram-display::-webkit-scrollbar {
+            width: 5px;
+        }
+        
+        .hologram-display::-webkit-scrollbar-track {
+            background: rgba(0, 255, 255, 0.1);
+        }
+        
+        .hologram-display::-webkit-scrollbar-thumb {
+            background: #00ffff;
+            border-radius: 5px;
+        }
+        
+        .message {
+            margin: 0.5rem 0;
+            padding: 0.5rem;
+            border-radius: 5px;
+            animation: fadeIn 0.5s ease-in;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .user-message {
+            background: rgba(0, 255, 255, 0.1);
+            border-left: 3px solid #00ffff;
+        }
+        
+        .assistant-message {
+            background: rgba(255, 107, 53, 0.1);
+            border-left: 3px solid #ff6b35;
+        }
+        
+        .system-message {
+            background: rgba(0, 255, 0, 0.1);
+            border-left: 3px solid #00ff00;
+        }
+        
+        .error-message {
+            background: rgba(255, 0, 0, 0.1);
+            border-left: 3px solid #ff0000;
+            color: #ff6b6b;
+        }
+        
+        .pulse {
+            animation: pulse 1s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+        
+        .scanning-line {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, #00ffff, transparent);
+            animation: scan 3s linear infinite;
+        }
+        
+        @keyframes scan {
+            0% { transform: translateY(0); }
+            100% { transform: translateY(100vh); }
+        }
+        
+        .voice-indicator {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 200px;
+            height: 200px;
+            border: 3px solid #00ffff;
+            border-radius: 50%;
+            display: none;
+            animation: voicePulse 0.5s ease-in-out infinite alternate;
+        }
+        
+        @keyframes voicePulse {
+            from { transform: translate(-50%, -50%) scale(1); opacity: 0.8; }
+            to { transform: translate(-50%, -50%) scale(1.2); opacity: 0.4; }
+        }
+        
+        .voice-indicator.active {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div class="scanning-line"></div>
+    
+    <div class="jarvis-container">
+        <div class="jarvis-logo">J.A.R.V.I.S</div>
+        <div class="jarvis-logo" style="font-size: 1.5rem; margin-top: -1rem;">Just A Rather Very Intelligent System</div>
+        
+        <div class="status-display" id="status">
+            <div>STATUS: <span id="statusText">INITIALIZING...</span></div>
+            <div style="font-size: 0.8rem; margin-top: 0.5rem;">SYSTEM READY</div>
+        </div>
+        
+        <div class="control-panel">
+            <button class="jarvis-button main-button" id="listenBtn" onclick="startListening()">
+                🎤 VOICE ACTIVATION
+            </button>
+            <button class="jarvis-button" id="stopBtn" onclick="stopListening()" disabled>
+                ⏹️ DEACTIVATE
+            </button>
+            <button class="jarvis-button" onclick="startVideo()">
+                📹 VISUAL FEED
+            </button>
+            <button class="jarvis-button" onclick="stopVideo()">
+                ⏹️ TERMINATE FEED
+            </button>
+            <button class="jarvis-button" onclick="captureImage()">
+                📸 CAPTURE
+            </button>
+        </div>
+        
+        <div class="voice-indicator" id="voiceIndicator"></div>
+    </div>
+    
+    <div class="hologram-display">
+        <div style="text-align: center; margin-bottom: 1rem; font-weight: 700;">COMMUNICATION LOG</div>
+        <div id="messages"></div>
+    </div>
+
+    <script>
+        let isListening = false;
+        let statusInterval;
+        let messagesInterval;
+        let voiceIndicator;
+
+        // Update status with Iron Man styling
+        async function updateStatus() {
+            try {
+                const status = await eel.js_state()();
+                const statusText = document.getElementById('statusText');
+                const statusDisplay = document.getElementById('status');
+                
+                // Update status text with Iron Man styling
+                if (status === 'Available...') {
+                    statusText.textContent = 'ONLINE';
+                    statusText.style.color = '#00ff00';
+                    statusDisplay.style.borderColor = '#00ff00';
+                    statusDisplay.style.boxShadow = '0 0 20px rgba(0, 255, 0, 0.3)';
+                } else if (status === 'Thinking...') {
+                    statusText.textContent = 'PROCESSING';
+                    statusText.style.color = '#ff6b35';
+                    statusDisplay.style.borderColor = '#ff6b35';
+                    statusDisplay.style.boxShadow = '0 0 20px rgba(255, 107, 53, 0.3)';
+                } else {
+                    statusText.textContent = status.toUpperCase();
+                    statusText.style.color = '#00ffff';
+                }
+                
+                // Update button states based on status
+                const listenBtn = document.getElementById('listenBtn');
+                const stopBtn = document.getElementById('stopBtn');
+                
+                if (status === 'Available...') {
+                    listenBtn.disabled = false;
+                    stopBtn.disabled = true;
+                    isListening = false;
+                    hideVoiceIndicator();
+                } else if (status === 'Thinking...') {
+                    listenBtn.disabled = true;
+                    stopBtn.disabled = false;
+                    isListening = true;
+                    showVoiceIndicator();
+                }
+            } catch (error) {
+                console.error('Error updating status:', error);
+                document.getElementById('statusText').textContent = 'ERROR';
+                document.getElementById('statusText').style.color = '#ff0000';
+                addMessage('error', 'Connection error: Could not reach JARVIS');
+            }
+        }
+
+        // Voice indicator functions
+        function showVoiceIndicator() {
+            const indicator = document.getElementById('voiceIndicator');
+            indicator.classList.add('active');
+        }
+
+        function hideVoiceIndicator() {
+            const indicator = document.getElementById('voiceIndicator');
+            indicator.classList.remove('active');
+        }
+
+        // Start listening with Iron Man style
+        async function startListening() {
+            try {
+                if (isListening) return;
+                
+                const listenBtn = document.getElementById('listenBtn');
+                const stopBtn = document.getElementById('stopBtn');
+                
+                listenBtn.disabled = true;
+                stopBtn.disabled = false;
+                isListening = true;
+                showVoiceIndicator();
+                
+                addMessage('system', 'Voice activation initiated...');
+                
+                // Try to use actual microphone input
+                try {
+                    const stream = await navigator.mediaDevices.getUserMedia({ 
+                        audio: {
+                            deviceId: { exact: 'default' }, // Use default microphone (Logitech G733)
+                            echoCancellation: true,
+                            noiseSuppression: true,
+                            autoGainControl: true
+                        } 
+                    });
+                    
+                    addMessage('system', 'Microphone access granted. Listening...');
+                    
+                    // For now, use prompt as fallback until we implement real speech recognition
+                    const userInput = prompt("🎤 Speak your command to JARVIS:");
+                    if (userInput && userInput.trim()) {
+                        addMessage('user', `Voice Command: "${userInput}"`);
+                        await eel.js_mic(userInput)();
+                    } else {
+                        addMessage('system', 'No command received');
+                    }
+                    
+                    stream.getTracks().forEach(track => track.stop());
+                    
+                } catch (micError) {
+                    console.log('Microphone access failed, using text input:', micError);
+                    addMessage('system', 'Microphone not available, using text input');
+                    
+                    const userInput = prompt("🎤 Enter your command for JARVIS:");
+                    if (userInput && userInput.trim()) {
+                        addMessage('user', `Command: "${userInput}"`);
+                        await eel.js_mic(userInput)();
+                    }
+                }
+                
+            } catch (error) {
+                console.error('Error starting listening:', error);
+                addMessage('error', 'Voice activation failed');
+            } finally {
+                const listenBtn = document.getElementById('listenBtn');
+                const stopBtn = document.getElementById('stopBtn');
+                listenBtn.disabled = false;
+                stopBtn.disabled = true;
+                isListening = false;
+                hideVoiceIndicator();
+            }
+        }
+
+        // Stop listening
+        async function stopListening() {
+            try {
+                await eel.js_state("Available...")();
+                isListening = false;
+                
+                const listenBtn = document.getElementById('listenBtn');
+                const stopBtn = document.getElementById('stopBtn');
+                listenBtn.disabled = false;
+                stopBtn.disabled = true;
+                
+                addMessage('system', 'Stopped listening');
+            } catch (error) {
+                console.error('Error stopping listening:', error);
+                addMessage('error', 'Error: Could not stop listening');
+            }
+        }
+
+        // Start video
+        async function startVideo() {
+            try {
+                await eel.python_call_to_start_video()();
+                addMessage('system', 'Video started');
+            } catch (error) {
+                console.error('Error starting video:', error);
+                addMessage('error', 'Error: Could not start video');
+            }
+        }
+
+        // Stop video
+        async function stopVideo() {
+            try {
+                await eel.python_call_to_stop_video()();
+                addMessage('system', 'Video stopped');
+            } catch (error) {
+                console.error('Error stopping video:', error);
+                addMessage('error', 'Error: Could not stop video');
+            }
+        }
+
+        // Capture image
+        async function captureImage() {
+            try {
+                await eel.python_call_to_capture()();
+                addMessage('system', 'Image captured');
+            } catch (error) {
+                console.error('Error capturing image:', error);
+                addMessage('error', 'Error: Could not capture image');
+            }
+        }
+
+        // Handle captured image
+        eel.expose(handleCapturedImage);
+        function handleCapturedImage(imageData) {
+            try {
+                eel.handle_captured_image(imageData)();
+                addMessage('system', 'Image processed successfully');
+            } catch (error) {
+                console.error('Error handling captured image:', error);
+                addMessage('error', 'Error: Could not process image');
+            }
+        }
+
+        // Add message to chat
+        function addMessage(role, content) {
+            const messagesDiv = document.getElementById('messages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${role}-message`;
+            
+            const timestamp = new Date().toLocaleTimeString();
+            messageDiv.innerHTML = `<strong>[${timestamp}] ${role.toUpperCase()}:</strong> ${content}`;
+            
+            messagesDiv.appendChild(messageDiv);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        }
+
+        // Update messages
+        async function updateMessages() {
+            try {
+                const newMessages = await eel.js_messages()();
+                if (newMessages && newMessages.length > 0) {
+                    newMessages.forEach(msg => {
+                        if (typeof msg === 'string') {
+                            addMessage('assistant', msg);
+                        } else if (msg.content) {
+                            addMessage(msg.role || 'assistant', msg.content);
+                        }
+                    });
+                }
+            } catch (error) {
+                console.error('Error updating messages:', error);
+            }
+        }
+
+        // Initialize JARVIS
+        async function initializeJARVIS() {
+            try {
+                await eel.setup()();
+                addMessage('system', 'JARVIS initialized successfully');
+                
+                // Start periodic updates
+                statusInterval = setInterval(updateStatus, 1000);
+                messagesInterval = setInterval(updateMessages, 2000);
+                
+                // Initial status update
+                await updateStatus();
+                
+            } catch (error) {
+                console.error('Error initializing JARVIS:', error);
+                addMessage('error', 'Error: Could not initialize JARVIS');
+            }
+        }
+
+        // Start when page loads
+        document.addEventListener('DOMContentLoaded', initializeJARVIS);
+    </script>
+</body>
+</html>
+</html>

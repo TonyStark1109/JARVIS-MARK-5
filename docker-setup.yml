@@ -1,0 +1,91 @@
+services:
+  # Kali Linux for hacking tools
+  kali-linux:
+    image: kalilinux/kali-rolling
+    container_name: jarvis-kali
+    ports:
+      - "8080:8080"
+      - "4444:4444"
+      - "9998:9999"
+    volumes:
+      - ./TOOLS:/root/tools
+      - ./hacking-data:/root/data
+    environment:
+      - DEBIAN_FRONTEND=noninteractive
+    command: /bin/bash -c "apt update && apt install -y python3 python3-pip nmap sqlmap nikto dirb gobuster hydra john hashcat aircrack-ng wireshark tcpdump netcat-openbsd netcat-traditional && tail -f /dev/null"
+    networks:
+      - jarvis-network
+
+  # Python-based hacking tools
+  hacking-tools:
+    image: python:3.11-slim
+    container_name: jarvis-hacking-tools
+    ports:
+      - "8775:8775"
+      - "9997:9999"
+    volumes:
+      - ./TOOLS:/root/tools
+      - ./hacking-data:/root/data
+      - ./backend/modules:/root/modules
+    environment:
+      - PYTHONPATH=/root/modules
+    command: /bin/bash -c "pip install requests beautifulsoup4 scapy python-nmap && tail -f /dev/null"
+    networks:
+      - jarvis-network
+
+  # Nuclei Vulnerability Scanner
+  nuclei:
+    image: projectdiscovery/nuclei:latest
+    container_name: jarvis-nuclei
+    ports:
+      - "8081:8081"
+    volumes:
+      - ./hacking-data:/root/data
+      - ./nuclei-templates:/root/nuclei-templates
+      - ./nuclei-templates-official:/root/nuclei-templates-official
+    command: /bin/sh -c "nuclei --version && tail -f /dev/null"
+    networks:
+      - jarvis-network
+
+  # Nmap scanner
+  nmap:
+    image: alpine:latest
+    container_name: jarvis-nmap
+    volumes:
+      - ./hacking-data:/root/data
+    command: /bin/sh -c "apk add --no-cache nmap && tail -f /dev/null"
+    networks:
+      - jarvis-network
+
+  # Perplexica AI Search
+  perplexica:
+    image: python:3.11-slim
+    container_name: jarvis-perplexica
+    ports:
+      - "3001:3001"
+    volumes:
+      - ./backend/AI/Perplexica:/app
+      - ./ai-data:/app/data
+    environment:
+      - OPENAI_API_KEY=YOUR_OPENAI_API_KEY_HERE
+      - GROQ_API_KEY=YOUR_GROQ_API_KEY_HERE
+    command: /bin/bash -c "pip install openai groq requests flask fastapi uvicorn && python -c 'import openai; print(\"Perplexica AI Search Ready\")' && tail -f /dev/null"
+    networks:
+      - jarvis-network
+
+  # JARVIS Web Interface
+  jarvis-web:
+    image: nginx:alpine
+    container_name: jarvis-web
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./ui:/usr/share/nginx/html
+      - ./nginx.conf:/etc/nginx/nginx.conf
+    networks:
+      - jarvis-network
+
+networks:
+  jarvis-network:
+    driver: bridge

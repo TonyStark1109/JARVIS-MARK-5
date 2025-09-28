@@ -1,0 +1,109 @@
+# JARVIS-MARK5 Complete Requirements
+# Install with: pip install -r requirements_complete.txt
+
+# Core JARVIS Dependencies
+eel>=0.16.0
+pyautogui>=0.9.54
+opencv-python>=4.8.0.0
+Pillow>=10.0.0
+requests>=2.31.0
+beautifulsoup4>=4.12.0
+selenium>=4.15.0
+webdriver-manager>=4.0.0
+
+# Voice and Audio
+speechrecognition>=3.10.0
+pyttsx3>=2.90
+pyaudio>=0.2.11
+sounddevice>=0.4.6
+pydub>=0.25.1
+librosa>=0.10.1
+soundfile>=0.12.1
+
+# AI and Machine Learning
+torch>=2.0.0
+torchaudio>=2.0.0
+transformers>=4.30.0
+datasets>=2.14.0
+accelerate>=0.20.0
+safetensors>=0.3.0
+scikit-learn>=1.3.0
+numpy>=1.24.0
+scipy>=1.11.0
+
+# OCR and Document Processing
+easyocr>=1.7.0
+pytesseract>=0.3.10
+python-pptx>=0.6.21
+PyPDF2>=3.0.1
+python-docx>=0.8.11
+
+# GitHub Integration
+PyGithub>=1.59.0
+gitpython>=3.1.32
+
+# Media and YouTube
+yt-dlp>=2023.7.6
+moviepy>=1.0.3
+imageio>=2.31.0
+
+# System and Platform
+psutil>=5.9.0
+platform>=1.0.8
+subprocess32>=3.5.4
+
+# Web and API
+flask>=2.3.0
+fastapi>=0.100.0
+uvicorn>=0.23.0
+websockets>=11.0.0
+
+# Database
+sqlalchemy>=2.0.0
+sqlite3
+sqlmodel>=0.0.8
+
+# Configuration and Environment
+python-dotenv>=1.0.0
+pydantic>=2.0.0
+toml>=0.10.2
+pyyaml>=6.0
+
+# Networking and Security
+cryptography>=41.0.0
+paramiko>=3.2.0
+scapy>=2.5.0
+
+# Data Processing
+pandas>=2.0.0
+matplotlib>=3.7.0
+seaborn>=0.12.0
+plotly>=5.15.0
+
+# Async and Threading
+asyncio
+aiohttp>=3.8.0
+aiofiles>=23.0.0
+concurrent-futures>=3.1.1
+
+# Utilities
+tqdm>=4.65.0
+colorama>=0.4.6
+rich>=13.0.0
+click>=8.1.0
+typer>=0.9.0
+
+# RAVANA AGI Dependencies
+# Note: These may need to be installed separately from RAVANA directory
+# sqlmodel>=0.0.8
+# pydantic>=2.0.0
+# fastapi>=0.100.0
+# uvicorn>=0.23.0
+
+# Optional: Advanced Features
+# Uncomment if you want these features
+# tensorflow>=2.13.0
+# keras>=2.13.0
+# openai>=0.27.0
+# anthropic>=0.3.0
+# groq>=0.4.0

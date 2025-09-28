@@ -1,0 +1,1 @@
+{"entry_id": "833b8642-270d-41b9-a2b3-8895872a4224", "timestamp": "2025-09-28 18:37:43.675020", "level": "INFO", "worker_id": "test_worker", "event_type": "test_event", "message": "System event: test_event", "data": {"test": "data", "component": "simple_test"}, "session_id": null, "correlation_id": null}

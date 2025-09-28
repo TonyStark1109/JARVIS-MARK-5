@@ -1,0 +1,19 @@
+# MCP Server Requirements
+# Core MCP dependencies
+mcp>=1.14.1
+pydantic>=2.11.0
+anyio>=4.5.0
+httpx>=0.28.1
+httpx-sse>=0.4.0
+jsonschema>=4.20.0
+python-multipart>=0.0.20
+sse-starlette>=1.6.1
+starlette>=0.27.0
+uvicorn>=0.31.1
+
+# Additional dependencies for specific servers
+requests>=2.31.0
+aiohttp>=3.9.0
+Pillow>=10.0.0
+pytz>=2023.3
+wikipedia>=1.4.0
