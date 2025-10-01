@@ -67,8 +67,8 @@ services:
       - ./backend/AI/Perplexica:/app
       - ./ai-data:/app/data
     environment:
-      - OPENAI_API_KEY=YOUR_OPENAI_API_KEY_HERE
-      - GROQ_API_KEY=YOUR_GROQ_API_KEY_HERE
+      - OPENAI_API_KEY=YOUR_OPENAI_API_KEY
+      - GROQ_API_KEY=YOUR_GROQ_API_KEY
     command: /bin/bash -c "pip install openai groq requests flask fastapi uvicorn && python -c 'import openai; print(\"Perplexica AI Search Ready\")' && tail -f /dev/null"
     networks:
       - jarvis-network

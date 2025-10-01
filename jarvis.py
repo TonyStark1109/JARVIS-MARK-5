@@ -34,7 +34,7 @@ except ImportError:
     print("Warning: python-dotenv not available")
 
 # Import JARVIS Desktop Automation
-from JARVIS_DESKTOP_automation import JARVISDesktopInterface
+from jarvis_desktop_automation import JARVISDesktopInterface
 
 # Import hacking module
 from backend.modules.hacking import EthicalHacking

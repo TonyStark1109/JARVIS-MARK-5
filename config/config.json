@@ -1,0 +1,12 @@
+{
+    "GROQ_API": "YOUR_GROQ_API_KEY",
+    "GROQ_API_KEY": "YOUR_GROQ_API_KEY",
+    "OPENAI_API_KEY": "YOUR_OPENAI_API_KEY",
+    "OPENAI_API": "YOUR_OPENAI_API_KEY",
+    "ELEVENLABS_API_KEY": "YOUR_ELEVENLABS_API_KEY",
+    "WEATHER_API_KEY": "openweathermap_api_key_here",
+    "PENTESTGPT_API_KEY": "",
+    "description": "JARVIS Mark 5 Configuration File",
+    "version": "1.0.0",
+    "last_updated": "2025-09-29"
+}

@@ -1,0 +1,31 @@
+version: '3.8'
+
+services:
+  perplexica:
+    build: .
+    ports:
+      - "3001:3001"
+    environment:
+      - PORT=3001
+      - OPENAI_API_KEY=YOUR_OPENAI_API_KEY
+      - GROQ_API_KEY=YOUR_GROQ_API_KEY
+    volumes:
+      - ./data:/app/data
+      - ./uploads:/app/uploads
+    networks:
+      - perplexica-net
+
+  searxng:
+    image: searxng/searxng:latest
+    ports:
+      - "32768:8080"
+    environment:
+      - SEARXNG_HOSTNAME=localhost
+    volumes:
+      - ./searxng:/etc/searxng
+    networks:
+      - perplexica-net
+
+networks:
+  perplexica-net:
+    driver: bridge

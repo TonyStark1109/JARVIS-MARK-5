@@ -1,0 +1,38 @@
+{
+  "name": "perplexica",
+  "version": "1.0.0",
+  "description": "Perplexica - AI-powered search engine for JARVIS",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "nodemon src/index.js",
+    "build": "npm run build:ui",
+    "build:ui": "cd ui && npm install && npm run build"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "cors": "^2.8.5",
+    "helmet": "^7.0.0",
+    "dotenv": "^16.3.1",
+    "axios": "^1.5.0",
+    "cheerio": "^1.0.0-rc.12",
+    "openai": "^4.0.0",
+    "groq-sdk": "^0.7.0",
+    "node-cron": "^3.0.2",
+    "winston": "^3.10.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
+  },
+  "keywords": [
+    "ai",
+    "search",
+    "jarvis",
+    "perplexica"
+  ],
+  "author": "JARVIS Team",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
