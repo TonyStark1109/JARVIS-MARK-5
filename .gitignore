@@ -1,201 +1,37 @@
-# Python
-__pycache__/
-*.py[cod]
-*$py.class
-*.so
-.Python
-build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-pip-wheel-metadata/
-share/python-wheels/
-*.egg-info/
-.installed.cfg
-*.egg
-MANIFEST
+# Large binary files
+*.whl
+*.exe
+*.pth
+*.bin
+*.db
 
-# PyInstaller
-*.manifest
-*.spec
+# AI Models
+AI_Models/
 
-# Installer logs
-pip-log.txt
-pip-delete-this-directory.txt
+# Large wordlists
+TOOLS/wordlists/rockyou.txt
+TOOLS/wordlists/common.txt
 
-# Unit test / coverage reports
-htmlcov/
-.tox/
-.nox/
-.coverage
-.coverage.*
-.cache
-nosetests.xml
-coverage.xml
-*.cover
-*.py,cover
-.hypothesis/
-.pytest_cache/
-
-# Translations
-*.mo
-*.pot
-
-# Django stuff:
-*.log
-local_settings.py
-db.sqlite3
-db.sqlite3-journal
-
-# Flask stuff:
-instance/
-.webassets-cache
-
-# Scrapy stuff:
-.scrapy
-
-# Sphinx documentation
-docs/_build/
-
-# PyBuilder
-target/
-
-# Jupyter Notebook
-.ipynb_checkpoints
-
-# IPython
-profile_default/
-ipython_config.py
-
-# pyenv
-.python-version
-
-# pipenv
-Pipfile.lock
-
-# PEP 582
-__pypackages__/
-
-# Celery stuff
-celerybeat-schedule
-celerybeat.pid
-
-# SageMath parsed files
-*.sage.py
-
-# Environments
-.env
-.venv
-env/
-venv/
-ENV/
-env.bak/
-venv.bak/
-
-# Spyder project settings
-.spyderproject
-.spyproject
-
-# Rope project settings
-.ropeproject
-
-# mkdocs documentation
-/site
-
-# mypy
-.mypy_cache/
-.dmypy.json
-dmypy.json
-
-# Pyre type checker
-.pyre/
-
-# JARVIS specific
-*.log
-*.tmp
-temp/
-logs/
-cache/
+# Python cache
 __pycache__/
 *.pyc
 *.pyo
 *.pyd
-.Python
-env/
-venv/
-.venv/
-pip-log.txt
-pip-delete-this-directory.txt
 
-# IDE
-.vscode/
-.idea/
-*.swp
-*.swo
-*~
-
-# OS
-.DS_Store
-.DS_Store?
-._*
-.Spotlight-V100
-.Trashes
-ehthumbs.db
-Thumbs.db
-
-# Docker
-.dockerignore
-docker-compose.override.yml
-
-# AI Models (large files)
-*.model
-*.pkl
-*.h5
-*.hdf5
-*.bin
-*.safetensors
-*.pth
-AI_Models/
-
-# Large wordlists and datasets
-TOOLS/wordlists/
-*.txt
-!requirements*.txt
-!README*.txt
-
-# Test files
-test_*.py
-*_test.py
-debug_*.py
-
-# Temporary files
-*.tmp
-*.temp
-temp/
-tmp/
+# Logs
+*.log
+snake_logs/
 
 # Database files
 *.db
 *.sqlite
-*.sqlite3
 
-# Configuration files with sensitive data
-config.json
-secrets.json
-.env.local
-.env.production
+# Large templates
+nuclei-templates/
 
-# RAVANA specific
-RAVANA/test_*.py
-RAVANA/debug_*.py
-RAVANA/test_sandbox/
-RAVANA/test_data/
+# Submodules
+RAVANA_ORIGINAL/
 
+# Temporary files
+*.tmp
+*.temp

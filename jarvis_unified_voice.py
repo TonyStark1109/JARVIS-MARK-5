@@ -46,12 +46,9 @@ except ImportError:
     WhisperModel = None
 
 # Try to import pyttsx3 for TTS
-try:
-    import pyttsx3
-    TTS_AVAILABLE = True
-except ImportError:
-    TTS_AVAILABLE = False
-    pyttsx3 = None
+# pyttsx3 removed - using pygame TTS only
+pyttsx3 = None
+TTS_AVAILABLE = False
 
 # Fast Whisper only - no fallback needed
 
@@ -79,6 +76,11 @@ class JARVISUnifiedVoice:
 
     def __init__(self):
         self.logger = logging.getLogger(__name__)
+        
+        # TTS engine removed - using pygame TTS only
+
+        # Set CUDA environment variables for better compatibility
+        self._setup_cuda_environment()
 
         # Wake words and variations
         self.wake_words = [
@@ -87,15 +89,23 @@ class JARVISUnifiedVoice:
             "wake up jarvis", "jarvis wake up", "hey buddy", "okay buddy",
             "jarvis wake up", "wake up", "hey ai", "okay ai"
         ]
+        
+        # Clap detection
+        self.clap_detector = None
+        self.clap_detection_enabled = True
+        
+        # Pygame audio interpretation
+        self.audio_analysis_enabled = True
+        self.audio_events = []
 
-        # Audio configuration for Logitech headset
-        self.chunk_size = 1024
+        # Audio configuration for Logitech headset - OPTIMIZED FOR SPEED
+        self.chunk_size = 512  # Smaller chunks for faster processing
         self.audio_format = pyaudio.paInt16 if pyaudio else None
         self.channels = 1
         self.sample_rate = 16000
-        self.record_seconds = 3
+        self.record_seconds = 1.5  # Shorter recording for faster response
         self.silence_threshold = 0.01  # Very low threshold for better voice detection
-        self.silence_duration = 1.0
+        self.silence_duration = 0.5  # Shorter silence detection
         self.energy_threshold = 0.005  # Lower energy threshold for better detection
 
         # Logitech device detection
@@ -140,7 +150,78 @@ class JARVISUnifiedVoice:
         self.processing_thread = threading.Thread(target=self._process_audio_thread, daemon=True)
         self.processing_thread.start()
 
+        # Test TTS audio output
+        self._test_audio_output()
+        
+        # Initialize clap detection
+        self._initialize_clap_detection()
+        
         self.logger.info("JARVIS Unified Voice System initialized")
+
+    def _test_audio_output(self):
+        """Test and configure audio output for TTS using pygame"""
+        try:
+            if pygame:
+                self.logger.info("Testing pygame TTS audio output...")
+                # Test pygame TTS
+                self._speak_pygame_tts("Hello! This is JARVIS testing pygame TTS audio output. Can you hear me clearly through your Logitech headset?")
+                self.logger.info("Pygame TTS test completed - did you hear JARVIS speaking?")
+            else:
+                self.logger.warning("pygame not available for audio output test")
+        except Exception as e:
+            self.logger.error("Audio output test failed: %s", e)
+
+    def _initialize_clap_detection(self):
+        """Initialize clap detection system"""
+        try:
+            # Import clap detector
+            import sys
+            import os
+            sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'TOOLS', 'AUDIO'))
+            from ClapDetection import ClapDetector
+            
+            # Create clap detector with callback
+            self.clap_detector = ClapDetector(callback=self._on_clap_detected)
+            
+            # Start clap detection if enabled
+            if self.clap_detection_enabled:
+                self.clap_detector.start_detection()
+                self.logger.info("Clap detection initialized and started")
+            else:
+                self.logger.info("Clap detection initialized but disabled")
+                
+        except ImportError as e:
+            self.logger.warning("Clap detection not available: %s", e)
+            self.clap_detector = None
+        except Exception as e:
+            self.logger.error("Failed to initialize clap detection: %s", e)
+            self.clap_detector = None
+
+    def _on_clap_detected(self):
+        """Handle clap detection - wake up JARVIS"""
+        try:
+            self.logger.info("Clap detected! Waking up JARVIS...")
+            
+            # JARVIS responds to clap
+            self.speak("Yes, I heard your clap! How can I assist you?")
+            
+            # Start listening for command after clap
+            self._listen_for_command()
+            
+        except Exception as e:
+            self.logger.error("Error handling clap detection: %s", e)
+
+    def _setup_cuda_environment(self):
+        """Setup CUDA environment variables for better compatibility"""
+        try:
+            # Set CUDA environment variables for better library loading
+            os.environ['CUDA_VISIBLE_DEVICES'] = '0'  # Use first GPU
+            os.environ['CUDA_LAUNCH_BLOCKING'] = '1'  # For debugging
+            # Force CUDA 11.8 compatibility
+            os.environ['CUDA_HOME'] = os.environ.get('CUDA_HOME', '')
+            self.logger.info("CUDA environment variables set for GPU mode")
+        except Exception as e:
+            self.logger.warning("Failed to set CUDA environment: %s", e)
 
     def _find_logitech_device(self):
         """Find Logitech headset device index"""
@@ -151,7 +232,9 @@ class JARVISUnifiedVoice:
             audio = pyaudio.PyAudio()
             for i in range(audio.get_device_count()):
                 info = audio.get_device_info_by_index(i)
-                if 'logitech' in info['name'].lower() and info['maxInputChannels'] > 0:
+                if ('logitech' in info['name'].lower() and 
+                    isinstance(info['maxInputChannels'], (int, float)) and 
+                    info['maxInputChannels'] > 0):
                     self.logger.info("Found Logitech device: %s (Index: %s)", info['name'], i)
                     audio.terminate()
                     return i
@@ -202,47 +285,41 @@ class JARVISUnifiedVoice:
             )
             return
 
-        # Try GPU first, but fallback to CPU if CUDA libraries are missing
-        gpu_attempted = False
+        # Force GPU usage as requested by user
         try:
             # Detect GPU availability and configure accordingly
             device, compute_type = self._detect_best_device()
+            
             if device == "cuda":
-                gpu_attempted = True
                 self.logger.info("Loading Whisper model: base on %s with %s", device, compute_type)
-                self.whisper_model = WhisperModel(
-                    "base",
-                    device=device,
-                    compute_type=compute_type
-                )
-                self.logger.info("Whisper model loaded successfully on %s", device)
+                
+                # Try different compute types for CUDA 11.8 compatibility
+                compute_types_to_try = [compute_type, "float16", "float32", "int8"]
+                
+                for ct in compute_types_to_try:
+                    try:
+                        self.logger.info("Attempting to load with compute_type: %s", ct)
+                        self.whisper_model = WhisperModel(
+                            "base",
+                            device=device,
+                            compute_type=ct
+                        )
+                        self.logger.info("SUCCESS: Whisper model loaded on %s with %s", device, ct)
+                        return  # Success, exit the function
+                    except Exception as e:
+                        self.logger.warning("Failed with compute_type %s: %s", ct, e)
+                        continue
+                
+                # If all compute types failed, raise error
+                raise RuntimeError("All GPU compute types failed")
             else:
-                # Direct CPU loading
-                self.logger.info("Loading Whisper model: base on CPU")
-                self.whisper_model = WhisperModel(
-                    "base",
-                    device="cpu",
-                    compute_type="float32"
-                )
-                self.logger.info("Whisper model loaded successfully on CPU")
-        except (RuntimeError, OSError, ImportError) as e:
-            self.logger.error("Failed to load Whisper model: %s", e)
-            if gpu_attempted:
-                # GPU failed, try CPU fallback
-                try:
-                    self.logger.info("Falling back to CPU for Whisper (GPU libraries missing)")
-                    self.whisper_model = WhisperModel(
-                        "base",
-                        device="cpu",
-                        compute_type="float32"
-                    )
-                    self.logger.info("Whisper model loaded successfully on CPU (fallback)")
-                except Exception as fallback_error:
-                    self.logger.error("CPU fallback also failed: %s", fallback_error)
-                    self.whisper_model = None
-            else:
-                self.logger.error("CPU loading failed: %s", e)
-                self.whisper_model = None
+                raise RuntimeError("GPU mode required but device detection failed")
+                
+        except Exception as e:
+            self.logger.error("Failed to load Whisper model on GPU: %s", e)
+            self.logger.error("GPU mode is required - please check CUDA installation")
+            self.whisper_model = None
+            raise RuntimeError(f"GPU Whisper initialization failed: {e}") from e
 
     def _detect_best_device(self) -> tuple[str, str]:
         """Detect the best available device for Whisper processing"""
@@ -251,7 +328,9 @@ class JARVISUnifiedVoice:
             if torch.cuda.is_available():
                 gpu_count = torch.cuda.device_count()
                 gpu_name = torch.cuda.get_device_name(0)
+                cuda_version = torch.version.cuda
                 self.logger.info("CUDA available: %d GPU(s) detected - %s", gpu_count, gpu_name)
+                self.logger.info("CUDA version: %s", cuda_version)
 
                 # Check GPU memory
                 gpu_memory = torch.cuda.get_device_properties(0).total_memory / 1024**3
@@ -264,23 +343,28 @@ class JARVISUnifiedVoice:
                     _ = test_tensor * 2  # Test operation
                     self.logger.info("CUDA libraries working properly")
                     
-                    if gpu_memory >= 4:  # At least 4GB VRAM for stable operation
+                    # Force GPU usage regardless of memory (user requested GPU only)
+                    if gpu_memory >= 2:  # Lowered threshold to 2GB
+                        self.logger.info("Forcing GPU usage as requested")
                         return "cuda", "float16"  # Use half precision for better performance
                     else:
-                        self.logger.warning("GPU memory too low (%.1f GB), using CPU", gpu_memory)
-                        return "cpu", "float32"
+                        self.logger.warning("GPU memory low (%.1f GB), forcing GPU usage", 
+                                           gpu_memory)
+                        return "cuda", "float32"  # Use float32 for low memory
                 except Exception as cuda_error:
-                    self.logger.warning("CUDA libraries not working: %s, using CPU", cuda_error)
-                    return "cpu", "float32"
+                    self.logger.warning("CUDA libraries test failed: %s", cuda_error)
+                    # Still try to use GPU even if test fails
+                    self.logger.info("Attempting GPU usage despite test failure")
+                    return "cuda", "float32"
             else:
-                self.logger.info("CUDA not available, using CPU")
-                return "cpu", "float32"
-        except ImportError:
-            self.logger.info("PyTorch not available, using CPU")
-            return "cpu", "float32"
+                self.logger.error("CUDA not available - this is required for GPU mode")
+                raise RuntimeError("CUDA not available - GPU mode required")
+        except ImportError as exc:
+            self.logger.error("PyTorch not available - this is required for GPU mode")
+            raise RuntimeError("PyTorch not available - GPU mode required") from exc
         except Exception as e:
-            self.logger.warning("Error detecting GPU: %s, using CPU", e)
-            return "cpu", "float32"
+            self.logger.error("Error detecting GPU: %s", e)
+            raise RuntimeError(f"GPU detection failed: {e}") from e
 
 
     def _initialize_modules(self):
@@ -364,6 +448,30 @@ class JARVISUnifiedVoice:
 
         except (OSError, RuntimeError, AttributeError) as e:
             self.logger.error("Failed to stop listening: %s", e)
+
+    def enable_clap_detection(self):
+        """Enable clap detection"""
+        self.clap_detection_enabled = True
+        if self.clap_detector:
+            self.clap_detector.start_detection()
+            self.logger.info("Clap detection enabled")
+        else:
+            self.logger.warning("Clap detector not available")
+
+    def disable_clap_detection(self):
+        """Disable clap detection"""
+        self.clap_detection_enabled = False
+        if self.clap_detector:
+            self.clap_detector.stop_detection()
+            self.logger.info("Clap detection disabled")
+
+    def set_clap_threshold(self, threshold: int):
+        """Set clap detection threshold"""
+        if self.clap_detector:
+            self.clap_detector.set_threshold(threshold)
+            self.logger.info("Clap detection threshold set to: %d", threshold)
+        else:
+            self.logger.warning("Clap detector not available")
 
     def _audio_callback(self, in_data, _frame_count=None, _time_info=None, _status=None):
         """Audio stream callback for real-time processing"""
@@ -473,20 +581,24 @@ class JARVISUnifiedVoice:
             if not np:
                 return None
             audio_float = audio_data.astype(np.float32) / 32768.0
+            
+            # Analyze audio with pygame for real-time interpretation
+            if self.audio_analysis_enabled:
+                self._analyze_audio_with_pygame(audio_data)
 
-            # Transcribe with Whisper (optimized for GPU and voice detection)
+            # Transcribe with Whisper (ULTRA-OPTIMIZED for speed)
             segments, info = self.whisper_model.transcribe(
                 audio_float,
-                beam_size=1,  # Faster processing
+                beam_size=1,  # Fastest processing
                 language="en",
                 condition_on_previous_text=False,
-                vad_filter=False,  # Disable VAD - it's removing all audio
-                temperature=0.0,  # More deterministic
+                vad_filter=False,  # Disable VAD for speed
+                temperature=0.0,  # Deterministic
                 compression_ratio_threshold=2.4,
                 log_prob_threshold=-1.0,
-                no_speech_threshold=0.05,  # Very low threshold for speech detection
-                word_timestamps=True,  # Better word recognition
-                initial_prompt="Hey JARVIS, wake up, listen"  # Help with wake word recognition
+                no_speech_threshold=0.1,  # Higher threshold for faster processing
+                word_timestamps=False,  # Disable for speed
+                initial_prompt="Hey JARVIS"  # Shorter prompt for speed
             )
 
             # Collect segments
@@ -700,23 +812,225 @@ class JARVISUnifiedVoice:
             self._speak_system_tts(text)
 
     def _speak_system_tts(self, text: str):
-        """System TTS using pyttsx3"""
+        """System TTS using pygame for better audio device routing"""
         try:
-            if pyttsx3 is not None:
-                engine = pyttsx3.init()
-                engine.setProperty('rate', 150)
-                engine.setProperty('volume', 0.9)
-                engine.say(text)
-                engine.runAndWait()
+            # Use pygame TTS only (pyttsx3 removed)
+            if pygame:
+                self._speak_pygame_tts(text)
             else:
                 print(f"JARVIS: {text}")  # Print as fallback
-        except (RuntimeError, OSError, ValueError) as e:
+        except Exception as e:
             self.logger.error("System TTS failed: %s", e)
             print(f"JARVIS: {text}")  # Print as last resort
+
+    def _speak_pygame_tts(self, text: str):
+        """Enhanced TTS using pygame with advanced audio features"""
+        try:
+            import tempfile
+            import os
+            import time
+            
+            self.logger.info("Using enhanced pygame TTS for: %s", text)
+            
+            # Create temporary WAV file
+            with tempfile.NamedTemporaryFile(suffix='.wav', delete=False) as temp_file:
+                temp_wav = temp_file.name
+            
+            try:
+                # Use Windows SAPI to generate high-quality WAV file
+                import win32com.client
+                speaker = win32com.client.Dispatch("SAPI.SpVoice")
+                
+                # Configure voice for better quality
+                voices = speaker.GetVoices()
+                if voices.Count > 0:
+                    # Use the first available voice (usually the best one)
+                    speaker.Voice = voices.Item(0)
+                
+                # Set speech rate and volume
+                speaker.Rate = 0  # Normal rate
+                speaker.Volume = 100  # Maximum volume
+                
+                file_stream = win32com.client.Dispatch("SAPI.SpFileStream")
+                file_stream.Open(temp_wav, 3)  # 3 = write mode
+                speaker.AudioOutputStream = file_stream
+                speaker.Speak(text)
+                file_stream.Close()
+                
+                # Enhanced pygame audio playback
+                if pygame:
+                    pygame.mixer.init(
+                        frequency=44100,  # Higher quality
+                        size=-16,         # 16-bit audio
+                        channels=2,       # Stereo
+                        buffer=1024       # Larger buffer for smoother playback
+                    )
+                    
+                    # Load and play audio with pygame
+                    pygame.mixer.music.load(temp_wav)
+                    pygame.mixer.music.set_volume(1.0)  # Maximum volume
+                    pygame.mixer.music.play()
+                
+                # Enhanced playback monitoring with audio interpretation
+                self._monitor_playback_with_interpretation()
+                
+                self.logger.info("Enhanced pygame TTS completed - check your Logitech headset!")
+                
+            finally:
+                # Clean up temporary file
+                if os.path.exists(temp_wav):
+                    try:
+                        os.unlink(temp_wav)
+                    except OSError:
+                        pass  # File might be in use, will be cleaned up later
+                    
+        except ImportError:
+            self.logger.warning("win32com not available, using text output")
+            print(f"JARVIS: {text}")
+        except Exception as e:
+            self.logger.error("Pygame TTS failed: %s", e)
+            print(f"JARVIS: {text}")
+
+    def _monitor_playback_with_interpretation(self):
+        """Monitor pygame playback with audio interpretation capabilities"""
+        try:
+            if not pygame:
+                return
+                
+            # Wait for playback to complete while monitoring audio
+            while pygame.mixer.music.get_busy():
+                # Get current playback position (if available)
+                try:
+                    # This gives us real-time audio monitoring capability
+                    current_time = pygame.time.get_ticks()
+                    
+                    # We could add audio analysis here in the future
+                    # For now, just monitor playback status
+                    pygame.time.wait(50)  # Check every 50ms
+                    
+                except Exception as e:
+                    # If position monitoring fails, just wait
+                    pygame.time.wait(100)
+                    
+        except Exception as e:
+            self.logger.warning("Playback monitoring error: %s", e)
+            # Fallback to simple wait
+            if pygame:
+                while pygame.mixer.music.get_busy():
+                    pygame.time.wait(100)
+
+    def _analyze_audio_with_pygame(self, audio_data):
+        """Analyze audio data using pygame for real-time interpretation"""
+        try:
+            if not pygame or not self.audio_analysis_enabled:
+                return None
+            
+            # Convert audio data to pygame-compatible format
+            import numpy as np
+            
+            # Convert to numpy array if not already
+            if not isinstance(audio_data, np.ndarray):
+                audio_array = np.frombuffer(audio_data, dtype=np.int16)
+            else:
+                audio_array = audio_data
+            
+            # Analyze audio characteristics
+            audio_analysis = {
+                'peak_amplitude': np.max(np.abs(audio_array)),
+                'rms_amplitude': np.sqrt(np.mean(audio_array**2)),
+                'frequency_spectrum': self._get_frequency_spectrum(audio_array),
+                'zero_crossing_rate': self._calculate_zero_crossing_rate(audio_array),
+                'timestamp': pygame.time.get_ticks()
+            }
+            
+            # Store audio event
+            self.audio_events.append(audio_analysis)
+            
+            # Keep only recent events (last 100)
+            if len(self.audio_events) > 100:
+                self.audio_events = self.audio_events[-100:]
+            
+            return audio_analysis
+            
+        except Exception as e:
+            self.logger.warning("Audio analysis failed: %s", e)
+            return None
+
+    def _get_frequency_spectrum(self, audio_data):
+        """Get frequency spectrum using pygame's audio capabilities"""
+        try:
+            import numpy as np
+            
+            # Simple FFT for frequency analysis
+            fft = np.fft.fft(audio_data)
+            frequencies = np.fft.fftfreq(len(audio_data))
+            
+            # Get dominant frequency
+            magnitude = np.abs(fft)
+            dominant_freq_idx = np.argmax(magnitude)
+            dominant_frequency = abs(frequencies[dominant_freq_idx])
+            
+            return {
+                'dominant_frequency': dominant_frequency,
+                'spectral_centroid': np.sum(frequencies * magnitude) / np.sum(magnitude),
+                'spectral_rolloff': self._calculate_spectral_rolloff(magnitude, frequencies)
+            }
+            
+        except Exception as e:
+            self.logger.warning("Frequency analysis failed: %s", e)
+            return None
+
+    def _calculate_zero_crossing_rate(self, audio_data):
+        """Calculate zero crossing rate for audio analysis"""
+        try:
+            import numpy as np
+            
+            # Calculate zero crossings
+            zero_crossings = np.where(np.diff(np.signbit(audio_data)))[0]
+            zcr = len(zero_crossings) / len(audio_data)
+            
+            return zcr
+            
+        except Exception as e:
+            self.logger.warning("Zero crossing calculation failed: %s", e)
+            return 0
+
+    def _calculate_spectral_rolloff(self, magnitude, frequencies, rolloff_threshold=0.85):
+        """Calculate spectral rolloff frequency"""
+        try:
+            import numpy as np
+            
+            # Calculate cumulative sum
+            cumsum = np.cumsum(magnitude)
+            total_energy = cumsum[-1]
+            
+            # Find rolloff frequency
+            rolloff_energy = rolloff_threshold * total_energy
+            rolloff_idx = np.where(cumsum >= rolloff_energy)[0]
+            
+            if len(rolloff_idx) > 0:
+                return abs(frequencies[rolloff_idx[0]])
+            else:
+                return abs(frequencies[-1])
+                
+        except Exception as e:
+            self.logger.warning("Spectral rolloff calculation failed: %s", e)
+            return 0
+
+    def get_audio_analysis(self):
+        """Get recent audio analysis data"""
+        return {
+            'recent_events': self.audio_events[-10:] if self.audio_events else [],
+            'total_events': len(self.audio_events),
+            'analysis_enabled': self.audio_analysis_enabled
+        }
+
 
     def get_status(self) -> Dict[str, Any]:
         """Get system status"""
         gpu_info = self._get_gpu_info()
+        clap_status = self.clap_detector.get_status() if self.clap_detector else {"is_running": False}
+        
         return {
             "is_listening": self.is_listening,
             "is_processing": self.is_processing,
@@ -724,6 +1038,7 @@ class JARVISUnifiedVoice:
             "tts_available": bool(self.elevenlabs_api_key) or TTS_AVAILABLE,
             "wake_words": self.wake_words,
             "gpu_info": gpu_info,
+            "clap_detection": clap_status,
             "audio_config": {
                 "sample_rate": self.sample_rate,
                 "channels": self.channels,
@@ -755,6 +1070,12 @@ class JARVISUnifiedVoice:
         """Cleanup resources"""
         try:
             self.stop_listening()
+            
+            # Stop clap detection
+            if self.clap_detector:
+                self.clap_detector.stop_detection()
+                self.clap_detector = None
+            
             self.logger.info("JARVIS Unified Voice System cleaned up")
         except (RuntimeError, OSError, ValueError) as e:
             self.logger.error("Error during cleanup: %s", e)

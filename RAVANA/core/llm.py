@@ -22,8 +22,7 @@ class LLMManager:
         """Load configuration."""
         try:
             with open('config/config.json', 'r') as f:
-    pass
-    config = json.load(f)
+                config = json.load(f)
             return config
         except Exception as e:
             self.logger.error(f"Config load error: {e}")
@@ -48,7 +47,7 @@ class LLMManager:
             
         except Exception as e:
             self.logger.error(f"Gemini keys error: {e}")
-    return []
+            return []
 
     def generate_response(self, prompt: str, model: str = "gemini") -> str:
         """Generate LLM response."""
@@ -69,7 +68,7 @@ class LLMManager:
         try:
             # Simulate Gemini response
             return f"Gemini response for: {prompt[:50]}..."
-                except Exception as e:
+        except Exception as e:
             self.logger.error(f"Gemini response error: {e}")
             return "Gemini response error"
     
@@ -84,7 +83,16 @@ class LLMManager:
             return len(key) > 10
         except Exception as e:
             self.logger.error(f"Key validation error: {e}")
-    return False
+            return False
+
+def safe_call_llm(prompt: str, model: str = "gemini") -> str:
+    """Safe wrapper for LLM calls."""
+    try:
+        llm = LLMManager()
+        return llm.generate_response(prompt, model)
+    except Exception as e:
+        logger.error(f"Safe LLM call error: {e}")
+        return "Error generating response"
 
 def main():
     """Main function."""

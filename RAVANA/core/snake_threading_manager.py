@@ -425,7 +425,19 @@ class SnakeThreadingManager:
 
                 if self.analysis_callback:
                     try:
-                        self.analysis_callback(analysis_task)
+                        # Check if callback is a coroutine and handle appropriately
+                        import asyncio
+                        if asyncio.iscoroutinefunction(self.analysis_callback):
+                            # Create new event loop for this thread
+                            loop = asyncio.new_event_loop()
+                            asyncio.set_event_loop(loop)
+                            try:
+                                # Run the coroutine
+                                loop.run_until_complete(self.analysis_callback(analysis_task))
+                            finally:
+                                loop.close()
+                        else:
+                            self.analysis_callback(analysis_task)
 
                         # Update metrics
                         processing_time = time.time() - start_time

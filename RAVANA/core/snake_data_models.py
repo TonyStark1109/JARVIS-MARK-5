@@ -202,8 +202,11 @@ class ProcessState:
         self.update_activity("task_failed")
 
     def to_dict(self) -> Dict[str, Any]:
-        """Convert to dictionary"""
-        return asdict(self)
+        """Convert to dictionary, excluding non-serializable objects"""
+        data = asdict(self)
+        # Remove non-serializable process object
+        data['process_object'] = None
+        return data
 
 
 @dataclass
@@ -240,8 +243,11 @@ class ThreadState:
         self.update_activity("error_occurred")
 
     def to_dict(self) -> Dict[str, Any]:
-        """Convert to dictionary"""
-        return asdict(self)
+        """Convert to dictionary, excluding non-serializable objects"""
+        data = asdict(self)
+        # Remove non-serializable thread object
+        data['thread_object'] = None
+        return data
 
 
 @dataclass

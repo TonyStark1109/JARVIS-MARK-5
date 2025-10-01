@@ -380,7 +380,7 @@ class SnakeAgentIntegration:
             self.logger.error(f"Error processing communication: {e}")
 
     def get_status(self) -> Dict[str, Any]:
-        """Get Snake Agent system status"""
+        """Get Snake Agent system status - safe serialization"""
         status = {
             "is_initialized": self.is_initialized,
             "is_running": self.is_running,
@@ -389,17 +389,53 @@ class SnakeAgentIntegration:
             "config": self.snake_config.to_dict()
         }
         
+        # Safely get process status without pickling issues
         if self.process_manager:
-            status["process_status"] = self.process_manager.get_process_status()
-            status["queue_status"] = self.process_manager.get_queue_status()
+            try:
+                process_status = self.process_manager.get_process_status()
+                # Convert to safe format
+                safe_process_status = {}
+                for key, value in process_status.items():
+                    if isinstance(value, dict):
+                        safe_process_status[key] = {k: v for k, v in value.items() 
+                                                  if not hasattr(v, '__getstate__')}
+                    else:
+                        safe_process_status[key] = str(value) if not isinstance(value, (str, int, float, bool)) else value
+                status["process_status"] = safe_process_status
+            except Exception as e:
+                status["process_status"] = {"error": str(e)}
         
+        # Safely get threading status without pickling issues
         if self.threading_manager:
-            status["thread_status"] = self.threading_manager.get_thread_status()
-            status["thread_queue_status"] = self.threading_manager.get_queue_status()
-            status["performance_metrics"] = self.threading_manager.get_performance_metrics()
+            try:
+                thread_status = self.threading_manager.get_thread_status()
+                # Convert to safe format
+                safe_thread_status = {}
+                for key, value in thread_status.items():
+                    if isinstance(value, dict):
+                        safe_thread_status[key] = {k: v for k, v in value.items() 
+                                                 if not hasattr(v, '__getstate__')}
+                    else:
+                        safe_thread_status[key] = str(value) if not isinstance(value, (str, int, float, bool)) else value
+                status["thread_status"] = safe_thread_status
+            except Exception as e:
+                status["thread_status"] = {"error": str(e)}
         
+        # Safely get experimenter status
         if self.experimenter:
-            status["experimenter_status"] = self.experimenter.get_status()
+            try:
+                experimenter_status = self.experimenter.get_status()
+                # Convert to safe format
+                safe_experimenter_status = {}
+                for key, value in experimenter_status.items():
+                    if isinstance(value, dict):
+                        safe_experimenter_status[key] = {k: v for k, v in value.items() 
+                                                       if not hasattr(v, '__getstate__')}
+                    else:
+                        safe_experimenter_status[key] = str(value) if not isinstance(value, (str, int, float, bool)) else value
+                status["experimenter_status"] = safe_experimenter_status
+            except Exception as e:
+                status["experimenter_status"] = {"error": str(e)}
         
         return status
 
