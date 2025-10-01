@@ -1,0 +1,60 @@
+{
+  "emotional_intelligence": {
+    "enabled": true,
+    "model": "distilbert-base-uncased-finetuned-sst-2-english",
+    "confidence_threshold": 0.7,
+    "update_frequency": 30,
+    "memory_decay": 0.95,
+    "emotional_states": {
+      "positive": ["joy", "excitement", "satisfaction", "pride", "gratitude"],
+      "negative": ["frustration", "anger", "sadness", "anxiety", "disappointment"],
+      "neutral": ["calm", "focused", "curious", "contemplative", "alert"]
+    },
+    "response_modifiers": {
+      "joy": 1.2,
+      "excitement": 1.3,
+      "satisfaction": 1.1,
+      "pride": 1.15,
+      "gratitude": 1.1,
+      "frustration": 0.8,
+      "anger": 0.7,
+      "sadness": 0.9,
+      "anxiety": 0.85,
+      "disappointment": 0.9,
+      "calm": 1.0,
+      "focused": 1.05,
+      "curious": 1.1,
+      "contemplative": 1.0,
+      "alert": 1.05
+    }
+  },
+  "persona_system": {
+    "default_persona": "Balanced",
+    "personas": {
+      "Balanced": {
+        "emotional_range": "moderate",
+        "response_style": "professional",
+        "empathy_level": "high",
+        "adaptability": "medium"
+      },
+      "Technical": {
+        "emotional_range": "low",
+        "response_style": "precise",
+        "empathy_level": "medium",
+        "adaptability": "high"
+      },
+      "Friendly": {
+        "emotional_range": "high",
+        "response_style": "casual",
+        "empathy_level": "very_high",
+        "adaptability": "high"
+      }
+    }
+  },
+  "learning": {
+    "enabled": true,
+    "learning_rate": 0.01,
+    "memory_size": 1000,
+    "feedback_weight": 0.3
+  }
+}
